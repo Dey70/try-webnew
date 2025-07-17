@@ -1102,9 +1102,13 @@ header {
 
 .testimonials-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+    grid-template-rows: repeat(2, 1fr);    /* 2 rows */
     gap: 30px;
     margin-top: 40px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .testimonial-card {
@@ -1196,9 +1200,9 @@ header {
         margin-bottom: 3rem;
     }
     
-    .testimonials-grid {
-        grid-template-columns: 1fr;
-        gap: 25px;
+   .testimonials-grid {
+        grid-template-columns: 1fr; 
+        grid-template-rows: auto;
     }
     
     .testimonial-card {
