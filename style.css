@@ -115,13 +115,13 @@ header {
     filter: drop-shadow(0 2px 10px rgba(255, 255, 255, 0.2));
 }
 
-nav {
+.desktop-nav {
     display: flex;
     align-items: center;
     gap: 2rem;
 }
 
-nav a {
+.desktop-nav a {
     color: #ccc;
     text-decoration: none;
     font-weight: 500;
@@ -129,12 +129,12 @@ nav a {
     position: relative;
 }
 
-nav a:hover {
+.desktop-nav a:hover {
     color: #eb2525;
     transform: translateY(-2px);
 }
 
-nav a::after {
+.desktop-nav a::after {
     content: '';
     position: absolute;
     bottom: -5px;
@@ -145,9 +145,10 @@ nav a::after {
     transition: width 0.3s ease;
 }
 
-nav a:hover::after {
+.desktop-nav a:hover::after {
     width: 100%;
 }
+
 /* ===== Hamburger Menu ===== */
 .hamburger {
     display: none;
@@ -184,24 +185,30 @@ nav a:hover::after {
 }
 
 /* Mobile Navigation */
-.nav-mobile {
+.mobile-nav {
     display: none;
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: 80px;
     left: 0;
     right: 0;
     background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    animation: slideDown 0.3s ease-out;
+    z-index: 99;
+    padding: 1rem 0;
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s ease;
 }
 
-.nav-mobile.active {
+.mobile-nav.active {
     display: block;
+    transform: translateY(0);
+    opacity: 1;
 }
 
-.nav-mobile a {
+.mobile-nav a {
     display: block;
     padding: 1rem 2rem;
     color: #ccc;
@@ -211,28 +218,17 @@ nav a:hover::after {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.nav-mobile a:hover {
+.mobile-nav a:hover {
     color: #eb2525;
     background: rgba(235, 37, 37, 0.1);
     padding-left: 2.5rem;
 }
 
-.nav-mobile .cta-button {
+.mobile-nav .cta-button {
     margin: 1rem 2rem;
     display: block;
     text-align: center;
     width: calc(100% - 4rem);
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 /* ===== Hero Section ===== */
@@ -807,14 +803,15 @@ nav a:hover::after {
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
     header {
-        flex-direction: column;
-        gap: 1rem;
         padding: 1rem;
     }
 
-    nav {
-        flex-direction: column;
-        gap: 1rem;
+    .desktop-nav {
+        display: none;
+    }
+
+    .hamburger {
+        display: flex;
     }
 
     .hero {
