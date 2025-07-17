@@ -236,7 +236,7 @@ header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6rem 2rem;
+    padding: 2rem 2rem 6rem 2rem;
     max-width: 1400px;
     margin: 0 auto;
     gap: 4rem;
@@ -816,7 +816,7 @@ header {
 
     .hero {
         flex-direction: column;
-        padding: 3rem 1rem;
+        padding: 1rem 1rem 3rem 1rem;
         text-align: center;
     }
 
