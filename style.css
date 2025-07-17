@@ -631,7 +631,7 @@ header {
 }
 
 .promo-container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 24px;
@@ -646,7 +646,7 @@ header {
 
 .promo-hero {
     background: linear-gradient(135deg, rgba(248, 249, 250, 0.1) 0%, rgba(233, 236, 239, 0.1) 100%);
-    padding: 60px 40px;
+    padding: 50px 40px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -678,7 +678,7 @@ header {
 }
 
 .promo-features {
-    padding: 40px;
+    padding: 20px;
     display: flex;
     align-items: center;
 }
