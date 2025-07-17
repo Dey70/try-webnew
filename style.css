@@ -1,0 +1,294 @@
+/* ===== Base Styles ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #ffffff;
+    background-color: #000000;
+}
+
+h1, h2, h3, h4 {
+    line-height: 1.2;
+}
+
+/* ===== Components ===== */
+/* Buttons */
+.cta-button {
+    background-color: #940d0d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    background-color: #b31010;
+    transform: scale(1.05);
+}
+
+.copy-button {
+    background: #eb2525;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.copy-button:hover {
+    background: #ffffff;
+    color: #000;
+}
+
+/* Divider */
+.divider {
+    width: 100px;
+    height: 2px;
+    background-color: #cbd5e1;
+    margin: 2rem auto;
+}
+
+/* Circle */
+.circle {
+    background-color: white;
+    color: black;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+/* ===== Layout Sections ===== */
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: #000000;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.logo-img {
+    width: 60px;
+    height: 70px;
+    margin-right: 0.5rem;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin-right: 1rem;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #940d0d;
+}
+
+/* Hero Section */
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 3rem;
+}
+.rose-logo-container {
+    display: flex;
+    align-items: center;
+}
+
+/* Rose Logo Styles */
+.rose-logo-container {
+    text-align: center; /* Centers the logo horizontally */
+    margin-bottom: 1.5rem; /* Adds space below the logo */
+}
+
+.rose-logo-img {
+    width: 80px; /* Adjust this value to your preferred size */
+    height: auto; /* Maintains aspect ratio */
+    display: block; /* Helps with centering */
+    margin: 0 auto; /* Centers the image horizontally */
+}
+
+.hero-video {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* How It Works */
+.how-it-works {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.how-it-works h2 {
+    font-size: 2.5rem;
+    color: #ef4444;
+    margin-bottom: 0.5rem;
+}
+
+.how-it-works p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+.steps {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 200px;
+}
+
+.step p {
+    font-size: 1rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.step p.highlight {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+/* Why Choose Section */
+.why-choose {
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.why-choose h2 {
+    font-size: 2rem;
+    color: #eb2525;
+    margin-bottom: 1rem;
+}
+
+.why-choose h3 {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    font-weight: normal;
+}
+
+.features {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.feature {
+    flex: 1;
+    text-align: left;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.feature h4 {
+    color: #ff0909;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.code-snippet {
+    background: #0f0f0f;
+    color: #f8fafc;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+}
+
+/* Contact Section */
+.contact {
+    padding: 2rem;
+    text-align: center;
+}
+
+form {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+}
+
+textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+===== Responsive Design =====
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .hero {
+        flex-direction: column;
+        padding: 2rem 1rem;
+    }
+
+    .hero-content {
+        min-width: auto;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .features {
+        flex-direction: column;
+    }
+
+    .feature {
+        margin-bottom: 1rem;
+    }
+} */
+ /* ===== Global Responsive Design =====
+
+
