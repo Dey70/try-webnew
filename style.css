@@ -296,10 +296,10 @@ header {
 }
 
 .demo-window {
-    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    background: linear-gradient(145deg, #000000, #000000);
     border-radius: 15px;
     padding: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 40px rgba(255, 255, 255, 0.216);
     transform: rotateY(-5deg) rotateX(5deg);
     transition: all 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -368,7 +368,7 @@ header {
 }
 
 .demo-content {
-    background: white;
+    background: rgba(255, 255, 255, 0.941);
     padding: 20px;
     border-radius: 8px;
     color: #333;
