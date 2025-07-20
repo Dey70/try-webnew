@@ -310,7 +310,7 @@ header {
 }
 
 .window-header {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
+    background: rgba(0, 0, 0, 0.801);
     height: 35px;
     border-radius: 10px 10px 0 0;
     display: flex;
@@ -401,7 +401,7 @@ header {
 }
 
 .nav-tabs span {
-    color: #4a90e2;
+    color: #ff0000;
     cursor: pointer;
     font-weight: 500;
     padding: 5px 10px;
@@ -414,7 +414,7 @@ header {
 }
 
 .nav-tabs span.active {
-    background: #4a90e2;
+    background: #fd0000;
     color: white;
 }
 
@@ -472,7 +472,7 @@ header {
     padding: 20px;
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 10px;
-    border-left: 4px solid #4a90e2;
+    border-left: 4px solid #eb2525;
     position: relative;
     overflow: hidden;
 }
@@ -503,8 +503,8 @@ header {
 }
 
 .original-text {
-    background: rgba(74, 144, 226, 0.1);
-    color: #4a90e2;
+    background: rgba(226, 119, 74, 0.1);
+    color: #eb2525;
 }
 
 .translated-text {
@@ -526,7 +526,7 @@ header {
 }
 
 .translate-btn {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
+    background: #eb2525;
     color: white;
     padding: 10px 20px;
     border: none;
