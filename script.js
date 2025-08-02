@@ -73,8 +73,195 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Copy code functionality
-  document.querySelector(".copy-button").addEventListener("click", copyCode);
+  // Dashboard functionality
+  const inputText = document.getElementById("inputText");
+  const outputText = document.getElementById("outputText");
+  const translateButton = document.getElementById("translateButton");
+  const charCount = document.querySelector(".char-count");
+
+  // Sample translations for demo purposes
+  const translations = {
+    "welcome to our website": "bienvenue sur notre site web",
+    "hello world": "bonjour le monde",
+    "how are you": "comment allez-vous",
+    "good morning": "bonjour",
+    "thank you": "merci",
+    "good evening": "bonsoir",
+    please: "s'il vous plaît",
+    "excuse me": "excusez-moi",
+    yes: "oui",
+    no: "non",
+    help: "aide",
+    "where is": "où est",
+    "i love you": "je t'aime",
+    "what time is it": "quelle heure est-il",
+    "i don't understand": "je ne comprends pas",
+    "speak english": "parlez anglais",
+    "how much": "combien",
+    where: "où",
+    when: "quand",
+    why: "pourquoi",
+    what: "quoi",
+    who: "qui",
+    how: "comment",
+    "the quick brown fox jumps over the lazy dog":
+      "le renard brun et rapide saute par-dessus le chien paresseux",
+    "artificial intelligence": "intelligence artificielle",
+    "machine learning": "apprentissage automatique",
+    technology: "technologie",
+    innovation: "innovation",
+    "digital transformation": "transformation numérique",
+    "data science": "science des données",
+    "software development": "développement de logiciels",
+    "web development": "développement web",
+    "mobile app": "application mobile",
+    "user experience": "expérience utilisateur",
+    "customer service": "service client",
+    "business strategy": "stratégie d'entreprise",
+    "market research": "étude de marché",
+    "global expansion": "expansion mondiale",
+    "e-commerce": "commerce électronique",
+  };
+
+  // Character counter
+  if (inputText && charCount) {
+    inputText.addEventListener("input", function () {
+      const count = this.value.length;
+      charCount.textContent = `${count} characters`;
+    });
+  }
+
+  // Translation functionality
+  if (translateButton && inputText && outputText) {
+    translateButton.addEventListener("click", function () {
+      const text = inputText.value.trim();
+
+      if (!text) {
+        // Shake animation for empty input
+        inputText.style.animation = "shake 0.5s ease-in-out";
+        setTimeout(() => {
+          inputText.style.animation = "";
+        }, 500);
+        return;
+      }
+
+      // Disable button and show loading state
+      translateButton.disabled = true;
+      const buttonText = translateButton.querySelector(".button-text");
+      const buttonIcon = translateButton.querySelector(".button-icon");
+      const originalText = buttonText.textContent;
+      const originalIcon = buttonIcon.textContent;
+
+      buttonText.textContent = "Translating...";
+      buttonIcon.textContent = "⏳";
+
+      // Clear output
+      outputText.value = "";
+
+      // Simulate translation delay
+      setTimeout(() => {
+        // Simple translation logic - check for exact matches first, then word-by-word
+        let translation = translateText(text.toLowerCase());
+
+        // Type out the translation with animation
+        typeTranslation(translation, () => {
+          // Re-enable button
+          translateButton.disabled = false;
+          buttonText.textContent = originalText;
+          buttonIcon.textContent = originalIcon;
+        });
+      }, 1500);
+    });
+  }
+
+  // Translation function
+  function translateText(text) {
+    // Check for exact match first
+    if (translations[text]) {
+      return translations[text];
+    }
+
+    // Word-by-word translation for unknown phrases
+    const words = text.split(" ");
+    const translatedWords = words.map((word) => {
+      // Remove punctuation for lookup
+      const cleanWord = word.replace(/[.,!?;:"'()]/g, "");
+      const punctuation = word.replace(cleanWord, "");
+
+      // Look up the clean word
+      const translatedWord =
+        translations[cleanWord] || generateMockTranslation(cleanWord);
+
+      return translatedWord + punctuation;
+    });
+
+    return translatedWords.join(" ");
+  }
+
+  // Generate mock French-like translation for unknown words
+  function generateMockTranslation(word) {
+    const frenchSuffixes = ["é", "er", "tion", "ique", "eux", "euse", "ment"];
+    const frenchPrefixes = ["dé", "pré", "sur", "sous", "anti", "inter"];
+
+    if (word.length < 3) return word;
+
+    // Simple transformation rules
+    let translated = word;
+
+    // Add French suffix
+    if (Math.random() > 0.5) {
+      const suffix =
+        frenchSuffixes[Math.floor(Math.random() * frenchSuffixes.length)];
+      translated = word.slice(0, -1) + suffix;
+    }
+
+    // Add French prefix occasionally
+    if (Math.random() > 0.8) {
+      const prefix =
+        frenchPrefixes[Math.floor(Math.random() * frenchPrefixes.length)];
+      translated = prefix + translated;
+    }
+
+    return translated;
+  }
+
+  // Typing animation for translation output
+  function typeTranslation(text, callback) {
+    let i = 0;
+    const typeSpeed = 30; // milliseconds per character
+
+    function typeChar() {
+      if (i < text.length) {
+        outputText.value += text.charAt(i);
+        i++;
+        setTimeout(typeChar, typeSpeed);
+      } else {
+        if (callback) callback();
+      }
+    }
+
+    typeChar();
+  }
+
+  // Add shake animation to CSS if not present
+  if (!document.querySelector("#shake-style")) {
+    const style = document.createElement("style");
+    style.id = "shake-style";
+    style.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Copy code functionality (if copy button exists)
+  const copyButton = document.querySelector(".copy-button");
+  if (copyButton) {
+    copyButton.addEventListener("click", copyCode);
+  }
 
   function copyCode() {
     const code = '<script src="https://cdn.webnew.com/webnew.js"></script>';
@@ -123,7 +310,15 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .querySelector(".hero .cta-button")
     .addEventListener("click", function () {
-      alert("Free trial signup would be implemented here.");
+      // Scroll to dashboard section
+      const dashboard = document.querySelector("#dashboard");
+      if (dashboard) {
+        dashboard.scrollIntoView({
+          behavior: "smooth",
+        });
+      } else {
+        alert("Free trial signup would be implemented here.");
+      }
     });
 
   // Add scroll effect to header
@@ -152,11 +347,57 @@ document.addEventListener("DOMContentLoaded", function () {
   }, observerOptions);
 
   // Observe elements for animation
-  document.querySelectorAll(".step, .feature").forEach((el) => {
-    el.style.opacity = "0";
-    el.style.transform = "translateY(20px)";
-    el.style.transition = "opacity 0.6s ease, transform 0.6s ease";
-    observer.observe(el);
-  });
-});
+  document
+    .querySelectorAll(".step, .feature, .testimonial-card, .feature-card")
+    .forEach((el) => {
+      el.style.opacity = "0";
+      el.style.transform = "translateY(20px)";
+      el.style.transition = "opacity 0.6s ease, transform 0.6s ease";
+      observer.observe(el);
+    });
 
+  // Dashboard animation on scroll
+  const dashboardSection = document.querySelector(".dashboard");
+  if (dashboardSection) {
+    const dashboardObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Animate dashboard elements
+            const translationPanel =
+              entry.target.querySelector(".translation-panel");
+            const features = entry.target.querySelectorAll(".feature-item");
+
+            if (translationPanel) {
+              translationPanel.style.opacity = "0";
+              translationPanel.style.transform = "translateY(30px)";
+              translationPanel.style.transition = "all 0.8s ease";
+
+              setTimeout(() => {
+                translationPanel.style.opacity = "1";
+                translationPanel.style.transform = "translateY(0)";
+              }, 200);
+            }
+
+            features.forEach((feature, index) => {
+              feature.style.opacity = "0";
+              feature.style.transform = "translateY(20px)";
+              feature.style.transition = "all 0.6s ease";
+
+              setTimeout(() => {
+                feature.style.opacity = "1";
+                feature.style.transform = "translateY(0)";
+              }, 400 + index * 100);
+            });
+          }
+        });
+      },
+      {
+        threshold: 0.2,
+        rootMargin: "0px 0px -100px 0px",
+      }
+    );
+
+    dashboardObserver.observe(dashboardSection);
+  }
+});
