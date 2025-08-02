@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,6 +18,7 @@
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
             <a href="#products">Products</a>
+            <a href="#dashboard">Dashboard</a>
             <button class="cta-button">Login</button>
         </nav>
     
@@ -33,6 +35,7 @@
         <a href="#features">Features</a>
         <a href="#pricing">Pricing</a>
         <a href="#products">Products</a>
+        <a href="#dashboard">Dashboard</a>
         <button class="cta-button">Login</button>
     </nav>
 
@@ -265,6 +268,83 @@
             </div>
         </div>
     </section>
+
+    <!-- Dashboard Section -->
+    <section class="dashboard" id="dashboard">
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <h2>Try Translation Dashboard</h2>
+                <p>Experience our AI-powered translation engine in action</p>
+            </div>
+            
+            <div class="dashboard-content">
+                <div class="translation-panel">
+                    <div class="input-section">
+                        <div class="input-header">
+                            <h3>Original Text</h3>
+                            <div class="language-indicator">
+                                <div class="flag english"></div>
+                                <span>English</span>
+                            </div>
+                        </div>
+                        <textarea 
+                            id="inputText" 
+                            placeholder="Enter text to translate... Try typing 'Welcome to our website' or any other text you'd like to see translated."
+                            rows="8"
+                        ></textarea>
+                        <div class="input-footer">
+                            <span class="char-count">0 characters</span>
+                        </div>
+                    </div>
+
+                    <div class="translation-controls">
+                        <div class="language-switch">
+                            <div class="switch-arrow">→</div>
+                        </div>
+                        <button id="translateButton" class="translate-button">
+                            <span class="button-icon">🌐</span>
+                            <span class="button-text">Translate</span>
+                        </button>
+                    </div>
+
+                    <div class="output-section">
+                        <div class="output-header">
+                            <h3>Translated Text</h3>
+                            <div class="language-indicator">
+                                <div class="flag french"></div>
+                                <span>Français</span>
+                            </div>
+                        </div>
+                        <textarea 
+                            id="outputText" 
+                            placeholder="Translation will appear here..."
+                            rows="8"
+                            readonly
+                        ></textarea>
+                        <div class="output-footer">
+                            <span class="translation-info">Powered by WebNew AI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">⚡</div>
+                        <span>Real-time Translation</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎯</div>
+                        <span>Context-Aware AI</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔒</div>
+                        <span>Secure & Private</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Contact Section -->
     <section class="contact">
         <h3>Need Help?</h3>
@@ -321,6 +401,7 @@
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#dashboard">Dashboard</a></li>
           <li><a href="#contact">Contact</a></li>
           <li><a href="#">Blog</a></li>
         </ul>
