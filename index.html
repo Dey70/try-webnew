@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,7 +131,7 @@
                     </div>
 
                     <div class="feature-card">
-                        <div class="feature-icon">🔍</div>
+                        <div class="feature-icon">📈</div>
                         <h3>SEO-Optimized</h3>
                         <p>Maintain your search rankings with proper hreflang tags and search engine friendly URL structures.</p>
                     </div>
@@ -144,7 +143,7 @@
                     </div>
 
                     <div class="feature-card">
-                        <div class="feature-icon">🌐</div>
+                        <div class="feature-icon">🌍</div>
                         <h3>Real-Time Language Switching</h3>
                         <p>Allow users to instantly switch languages on your site without page reloads. Enhance user experience with seamless transitions.</p>
                     </div>
@@ -293,24 +292,50 @@
                             rows="8"
                         ></textarea>
                         <div class="input-footer">
-                            <span class="char-count">0 characters</span>
+                            <div class="counter-info">
+                                <span class="char-count">0 characters</span>
+                                <span class="word-count">0 words</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="translation-controls">
+                        <div class="language-dropdown-container">
+                            <label for="languageSelector">Translate to:</label>
+                            <select id="languageSelector" class="language-dropdown">
+                                <option value="french">🇫🇷 Français</option>
+                                <option value="spanish">🇪🇸 Español</option>
+                                <option value="german">🇩🇪 Deutsch</option>
+                                <option value="italian">🇮🇹 Italiano</option>
+                                <option value="portuguese">🇵🇹 Português</option>
+                                <option value="dutch">🇳🇱 Nederlands</option>
+                                <option value="russian">🇷🇺 Русский</option>
+                                <option value="chinese">🇨🇳 中文</option>
+                                <option value="japanese">🇯🇵 日本語</option>
+                                <option value="korean">🇰🇷 한국어</option>
+                            </select>
+                        </div>
+                        
                         <div class="language-switch">
                             <div class="switch-arrow">→</div>
                         </div>
-                        <button id="translateButton" class="translate-button">
-                            <span class="button-icon">🌐</span>
-                            <span class="button-text">Translate</span>
-                        </button>
+                        
+                        <div class="control-buttons">
+                            <button id="translateButton" class="translate-button">
+                                <span class="button-icon">🌍</span>
+                                <span class="button-text">Translate</span>
+                            </button>
+                            <button id="clearButton" class="clear-button">
+                                <span class="button-icon">🗑️</span>
+                                <span class="button-text">Clear</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="output-section">
                         <div class="output-header">
                             <h3>Translated Text</h3>
-                            <div class="language-indicator">
+                            <div class="language-indicator" id="targetLanguageIndicator">
                                 <div class="flag french"></div>
                                 <span>Français</span>
                             </div>
@@ -323,6 +348,10 @@
                         ></textarea>
                         <div class="output-footer">
                             <span class="translation-info">Powered by WebNew AI</span>
+                            <button id="copyButton" class="copy-output-button">
+                                <span class="copy-icon">📋</span>
+                                Copy
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -457,6 +486,3 @@
     </div>
   </div>
 </footer>
-    <script src="script.js"></script>
-</body>
-</html>
