@@ -1,5 +1,5 @@
 // Hamburger menu functionality
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   const hamburger = document.querySelector(".hamburger");
   const mobileNav = document.querySelector(".mobile-nav");
 
@@ -38,17 +38,16 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .querySelector(".translate-btn")
     .addEventListener("click", function () {
-      const button = this;
-      const originalText = button.textContent;
+      const originalText = this.textContent;
 
-      button.textContent = "Translating...";
-      button.style.background = "linear-gradient(45deg, #28ca42, #22a83a)";
+      this.textContent = "Translating...";
+      this.style.background = "linear-gradient(45deg, #28ca42, #22a83a)";
 
       setTimeout(() => {
-        button.textContent = "Complete!";
+        this.textContent = "Complete!";
         setTimeout(() => {
-          button.textContent = originalText;
-          button.style.background = "";
+          this.textContent = originalText;
+          this.style.background = "";
         }, 1500);
       }, 1000);
     });
@@ -85,6 +84,8 @@ document.addEventListener("DOMContentLoaded", function () {
     "targetLanguageIndicator"
   );
   const copyButton = document.getElementById("copyButton");
+  const clearHistoryButton = document.getElementById("clearHistoryButton");
+  const historyContent = document.getElementById("historyContent");
 
   // Language configurations with flags and sample translations
   const languageConfigs = {
@@ -470,9 +471,36 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===== ENHANCED TRANSLATION FUNCTIONALITY ===== //
-  function translateText(text, targetLang) {
+  async function translateText(text, targetLang) {
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: text,
+          language: targetLang,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Translation failed");
+      }
+
+      const data = await response.json();
+      return data.translatedText;
+    } catch (error) {
+      console.error("Translation API Error:", error);
+      // Fallback to local mock translation if API fails
+      return generateFallbackTranslation(text, targetLang);
+    }
+  }
+
+  function generateFallbackTranslation(text, targetLang) {
     const config = languageConfigs[targetLang];
-    if (!config) return generateMockTranslation(text);
+    if (!config) return `${text} [Translated to ${targetLang}]`;
 
     const lowerText = text.toLowerCase();
 
@@ -588,7 +616,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ===== TRANSLATION BUTTON FUNCTIONALITY ===== //
   if (translateButton && inputText && outputText) {
-    translateButton.addEventListener("click", function () {
+    translateButton.addEventListener("click", async () => {
       const text = inputText.value.trim();
 
       if (!text) {
@@ -620,12 +648,8 @@ document.addEventListener("DOMContentLoaded", function () {
       outputText.value = "";
       outputText.placeholder = "Processing translation...";
 
-      // Simulate realistic translation delay
-      const delay = Math.min(2000, Math.max(800, text.length * 30));
-
-      setTimeout(() => {
-        // Perform translation
-        const translation = translateText(text, currentLanguage);
+      try {
+        const translation = await translateText(text, currentLanguage);
 
         // Type out the translation with animation
         typeTranslation(translation, () => {
@@ -635,8 +659,14 @@ document.addEventListener("DOMContentLoaded", function () {
           buttonIcon.textContent = originalIcon;
           translateButton.style.background = "";
           outputText.placeholder = "Translation will appear here...";
+
+          storeTranslationHistory(text, translation, currentLanguage);
         });
-      }, delay);
+      } catch (error) {
+        console.error("Translation failed:", error);
+        handleTranslationError();
+        showNotification("Translation failed. Please try again.", "error");
+      }
     });
   }
 
@@ -880,7 +910,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Login button functionality
   const headerLoginButton = document.querySelector("header .cta-button");
   if (headerLoginButton) {
-    headerLoginButton.addEventListener("click", function () {
+    headerLoginButton.addEventListener("click", () => {
       alert("Login functionality would be implemented here.");
     });
   }
@@ -888,7 +918,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Try for Free button functionality
   const heroCtaButton = document.querySelector(".hero .cta-button");
   if (heroCtaButton) {
-    heroCtaButton.addEventListener("click", function () {
+    heroCtaButton.addEventListener("click", () => {
       // Scroll to dashboard section
       const dashboard = document.querySelector("#dashboard");
       if (dashboard) {
@@ -902,7 +932,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Add scroll effect to header
-  window.addEventListener("scroll", function () {
+  window.addEventListener("scroll", () => {
     const header = document.querySelector("header");
     if (header) {
       if (window.scrollY > 100) {
@@ -984,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===== KEYBOARD SHORTCUTS ===== //
-  document.addEventListener("keydown", function (e) {
+  document.addEventListener("keydown", (e) => {
     // Ctrl + Enter to translate (when input is focused)
     if (
       (e.ctrlKey || e.metaKey) &&
@@ -1195,15 +1225,152 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ===== INITIALIZATION MESSAGE ===== //
+  // ===== TRANSLATION HISTORY ===== //
+  function storeTranslationHistory(
+    originalText,
+    translatedText,
+    targetLanguage
+  ) {
+    const history =
+      JSON.parse(localStorage.getItem("translationHistory")) || [];
+
+    const newEntry = {
+      id: Date.now(),
+      originalText,
+      translatedText,
+      targetLanguage,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Add to beginning of array and keep only last 5
+    history.unshift(newEntry);
+    const limitedHistory = history.slice(0, 5);
+
+    localStorage.setItem("translationHistory", JSON.stringify(limitedHistory));
+    displayTranslationHistory();
+  }
+
+  function displayTranslationHistory() {
+    const historyContent = document.getElementById("historyContent");
+    if (!historyContent) return;
+
+    const history =
+      JSON.parse(localStorage.getItem("translationHistory")) || [];
+
+    if (history.length === 0) {
+      historyContent.innerHTML = `
+        <div class="history-empty">
+          <div class="empty-icon">📝</div>
+          <p>No translations yet. Start translating to see your history here!</p>
+        </div>
+      `;
+      return;
+    }
+
+    historyContent.innerHTML = history
+      .map((item) => {
+        const languageConfig = languageConfigs[item.targetLanguage];
+        const languageName = languageConfig
+          ? languageConfig.name
+          : item.targetLanguage;
+        const languageFlag = languageConfig ? languageConfig.flagEmoji : "🌍";
+
+        const timestamp = new Date(item.timestamp).toLocaleString();
+
+        return `
+        <div class="history-item" data-id="${item.id}">
+          <div class="history-meta">
+            <div class="history-language">
+              <span>${languageFlag}</span>
+              <span>English → ${languageName}</span>
+            </div>
+            <div class="history-timestamp">${timestamp}</div>
+          </div>
+          <div class="history-texts">
+            <div class="history-original">${item.originalText}</div>
+            <div class="history-arrow">→</div>
+            <div class="history-translated">${item.translatedText}</div>
+          </div>
+          <div class="history-actions">
+            <button class="history-copy-btn" onclick="copyHistoryText('${item.translatedText.replace(
+              /'/g,
+              "\\'"
+            )}')">
+              <span>📋</span> Copy
+            </button>
+            <button class="history-reuse-btn" onclick="reuseHistoryText('${item.originalText.replace(
+              /'/g,
+              "\\'"
+            )}', '${item.targetLanguage}')">
+              <span>🔄</span> Reuse
+            </button>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+  }
+
+  // Global functions for history actions
+  window.copyHistoryText = (text) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showNotification("Translation copied to clipboard!", "success");
+      })
+      .catch(() => {
+        showNotification("Failed to copy text", "error");
+      });
+  };
+
+  window.reuseHistoryText = (originalText, targetLanguage) => {
+    if (inputText) {
+      inputText.value = originalText;
+      updateCounters(originalText);
+    }
+
+    if (languageSelector) {
+      languageSelector.value = targetLanguage;
+      languageSelector.dispatchEvent(new Event("change"));
+    }
+
+    // Scroll to input
+    if (inputText) {
+      inputText.scrollIntoView({ behavior: "smooth", block: "center" });
+      inputText.focus();
+    }
+
+    showNotification("Text loaded for translation!", "info");
+  };
+
+  function clearTranslationHistory() {
+    localStorage.removeItem("translationHistory");
+    displayTranslationHistory();
+    showNotification("Translation history cleared!", "success");
+  }
+
+  // Clear history button functionality
+  if (clearHistoryButton) {
+    clearHistoryButton.addEventListener("click", () => {
+      if (confirm("Are you sure you want to clear all translation history?")) {
+        clearTranslationHistory();
+      }
+    });
+  }
+
+  // Initialize history display on page load
+  displayTranslationHistory();
+
   console.log(
-    "🌍 WebNew Translation Dashboard initialized with Week 7 features!"
+    "🌍 WebNew Translation Dashboard initialized with Week 8 features!"
   );
   console.log("Features loaded:");
   console.log("✅ Multi-language support with 10 languages");
   console.log("✅ Live character and word counter");
   console.log("✅ Clear/Reset functionality");
   console.log("✅ Copy to clipboard");
+  console.log("✅ Backend API integration");
+  console.log("✅ Translation history storage");
   console.log("✅ Responsive design improvements");
   console.log("✅ Demo walkthrough capability");
   console.log("✅ Keyboard shortcuts (Ctrl+Enter to translate, Esc to clear)");
