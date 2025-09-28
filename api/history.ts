@@ -22,22 +22,51 @@ export default async function handler(
 
     switch (req.method) {
       case "GET":
-        // Get translation history (latest 10 entries)
-        const { data: history, error: fetchError } = await supabase
+        // Get translation history with pagination and export support
+        const { page = 1, limit = 10, export: isExport } = req.query;
+        const pageNum = parseInt(page as string) || 1;
+        const limitNum = parseInt(limit as string) || 10;
+        const offset = (pageNum - 1) * limitNum;
+
+        // For export, get all records
+        const query = supabase
           .from("translation_history")
           .select("*")
-          .order("created_at", { ascending: false })
-          .limit(10);
+          .order("created_at", { ascending: false });
 
-        if (fetchError) {
-          throw fetchError;
+        if (isExport === "true") {
+          // Export all records
+          const { data: allHistory, error: fetchError } = await query;
+          
+          if (fetchError) {
+            throw fetchError;
+          }
+
+          res.status(200).json({
+            success: true,
+            data: allHistory || [],
+            count: allHistory?.length || 0,
+            message: "Export data retrieved successfully"
+          });
+        } else {
+          // Paginated results
+          const { data: history, error: fetchError, count } = await query
+            .range(offset, offset + limitNum - 1);
+
+          if (fetchError) {
+            throw fetchError;
+          }
+
+          res.status(200).json({
+            success: true,
+            data: history || [],
+            count: history?.length || 0,
+            total: count || 0,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil((count || 0) / limitNum)
+          });
         }
-
-        res.status(200).json({
-          success: true,
-          data: history || [],
-          count: history?.length || 0,
-        });
         break;
 
       case "POST":
@@ -48,9 +77,10 @@ export default async function handler(
           target_language,
         }: CreateTranslationRequest = req.body;
 
-        // Validate input
+        // Enhanced input validation
         if (!original_text || !translated_text || !target_language) {
           return res.status(400).json({
+            success: false,
             error: "Missing required fields",
             message:
               "original_text, translated_text, and target_language are required",
@@ -59,8 +89,23 @@ export default async function handler(
 
         if (original_text.length > 1000) {
           return res.status(400).json({
+            success: false,
             error: "Text too long",
             message: "Original text must be less than 1000 characters",
+          });
+        }
+
+        // Validate language code
+        const validLanguages = [
+          'french', 'spanish', 'german', 'italian', 'portuguese', 
+          'dutch', 'russian', 'chinese', 'japanese', 'korean'
+        ];
+        
+        if (!validLanguages.includes(target_language)) {
+          return res.status(400).json({
+            success: false,
+            error: "Invalid language",
+            message: `Target language must be one of: ${validLanguages.join(', ')}`,
           });
         }
 
@@ -91,6 +136,7 @@ export default async function handler(
 
         if (!id || typeof id !== "string") {
           return res.status(400).json({
+            success: false,
             error: "Missing or invalid ID",
             message: "A valid translation ID is required",
           });
@@ -113,6 +159,7 @@ export default async function handler(
 
       default:
         res.status(405).json({
+          success: false,
           error: "Method not allowed",
           message: `Method ${req.method} is not supported`,
         });
@@ -121,6 +168,7 @@ export default async function handler(
     console.error("History API Error:", error);
 
     res.status(500).json({
+      success: false,
       error: "Internal server error",
       message: "An error occurred while processing your request",
       timestamp: new Date().toISOString(),

@@ -39,12 +39,14 @@ export default async function handler(
 
     res.status(200).json({
       success: true,
+      data: null,
       message: "All translation history cleared",
     });
   } catch (error) {
     console.error("Clear History API Error:", error);
 
     res.status(500).json({
+      success: false,
       error: "Internal server error",
       message: "An error occurred while clearing translation history",
       timestamp: new Date().toISOString(),

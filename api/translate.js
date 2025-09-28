@@ -21,9 +21,10 @@ export default async function handler(req, res) {
   try {
     const { text, language } = req.body;
 
-    // Validate input
+    // Enhanced input validation
     if (!text || !language) {
       return res.status(400).json({
+        success: false,
         error: "Missing required fields",
         message: "Both text and language are required",
       });
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
 
     if (typeof text !== "string" || text.trim().length === 0) {
       return res.status(400).json({
+        success: false,
         error: "Invalid text",
         message: "Text must be a non-empty string",
       });
@@ -38,8 +40,23 @@ export default async function handler(req, res) {
 
     if (text.length > 1000) {
       return res.status(400).json({
+        success: false,
         error: "Text too long",
         message: "Text must be less than 1000 characters",
+      });
+    }
+
+    // Validate language code
+    const validLanguages = [
+      'french', 'spanish', 'german', 'italian', 'portuguese', 
+      'dutch', 'russian', 'chinese', 'japanese', 'korean'
+    ];
+    
+    if (!validLanguages.includes(language)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid language",
+        message: `Language must be one of: ${validLanguages.join(', ')}`,
       });
     }
 
@@ -296,23 +313,27 @@ export default async function handler(req, res) {
     // Placeholder function for database storage (Week 10 implementation)
     const saveResult = await saveTranslationToDatabase(translationData);
 
-    // Return successful response
+    // Return successful response with consistent structure
     res.status(200).json({
       success: true,
-      originalText: text,
-      translatedText: translation,
-      targetLanguage: language,
-      timestamp: new Date().toISOString(),
-      processingTime: processingTime,
-      characterCount: text.length,
-      wordCount: text.trim().split(/\s+/).length,
-      saved: saveResult.saved,
-      id: saveResult.id,
+      data: {
+        originalText: text,
+        translatedText: translation,
+        targetLanguage: language,
+        timestamp: new Date().toISOString(),
+        processingTime: processingTime,
+        characterCount: text.length,
+        wordCount: text.trim().split(/\s+/).length,
+        saved: saveResult.saved,
+        id: saveResult.id,
+      },
+      message: "Translation completed successfully"
     });
   } catch (error) {
     console.error("Translation API Error:", error);
 
     res.status(500).json({
+      success: false,
       error: "Internal server error",
       message: "An error occurred while processing your translation request",
       timestamp: new Date().toISOString(),

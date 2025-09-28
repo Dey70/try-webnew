@@ -490,9 +490,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const data = await response.json();
-      return data.translatedText;
+      return data.data.translatedText;
     } catch (error) {
       console.error("Translation API Error:", error);
+      
+      // Enhanced error handling with specific messages
+      if (error.message.includes("Failed to fetch")) {
+        showNotification("Server not available. Please check your connection.", "error");
+      } else if (error.message.includes("Text too long")) {
+        showNotification("Text is too long. Please reduce the length.", "error");
+      } else if (error.message.includes("Missing required fields")) {
+        showNotification("Please enter text to translate.", "error");
+      } else {
+        showNotification("Translation failed. Please try again.", "error");
+      }
+      
       // Fallback to local mock translation if API fails
       return generateFallbackTranslation(text, targetLang);
     }
@@ -593,13 +605,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return translated;
   }
 
-  // Typing animation for translation output
+  // Enhanced typing animation for translation output
   function typeTranslation(text, callback) {
     if (!outputText) return;
 
     let i = 0;
-    const typeSpeed = Math.max(20, Math.min(50, 1000 / text.length)); // Adaptive speed
+    const typeSpeed = Math.max(15, Math.min(40, 800 / text.length)); // Adaptive speed
     outputText.value = "";
+    
+    // Add typing cursor effect
+    outputText.style.borderRight = "2px solid #ff4444";
+    outputText.style.animation = "blink 1s infinite";
 
     function typeChar() {
       if (i < text.length) {
@@ -607,6 +623,16 @@ document.addEventListener("DOMContentLoaded", () => {
         i++;
         setTimeout(typeChar, typeSpeed);
       } else {
+        // Remove typing cursor
+        outputText.style.borderRight = "";
+        outputText.style.animation = "";
+        
+        // Add completion animation
+        outputText.style.animation = "fadeInScale 0.3s ease-out";
+        setTimeout(() => {
+          outputText.style.animation = "";
+        }, 300);
+        
         if (callback) callback();
       }
     }
@@ -632,24 +658,48 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Disable button and show loading state
+      // Disable button and show enhanced loading state
       translateButton.disabled = true;
       const buttonText = translateButton.querySelector(".button-text");
       const buttonIcon = translateButton.querySelector(".button-icon");
       const originalText = buttonText.textContent;
       const originalIcon = buttonIcon.textContent;
 
+      // Create loading spinner
+      const spinner = document.createElement("div");
+      spinner.className = "loading-spinner";
+      spinner.style.marginRight = "8px";
+      
       buttonText.textContent = "Translating...";
-      buttonIcon.textContent = "⏳";
-      translateButton.style.background =
-        "linear-gradient(135deg, #666 0%, #555 100%)";
+      buttonIcon.innerHTML = "";
+      buttonIcon.appendChild(spinner);
+      translateButton.style.background = "linear-gradient(135deg, #666 0%, #555 100%)";
 
-      // Clear output and show processing state
+      // Clear output and show processing state with animation
       outputText.value = "";
       outputText.placeholder = "Processing translation...";
+      outputText.style.opacity = "0.7";
+      
+      // Add loading overlay to output section
+      const outputSection = outputText.closest('.output-section');
+      const loadingOverlay = document.createElement("div");
+      loadingOverlay.className = "loading-overlay";
+      loadingOverlay.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Translating...</div>
+      `;
+      outputSection.style.position = "relative";
+      outputSection.appendChild(loadingOverlay);
 
       try {
         const translation = await translateText(text, currentLanguage);
+
+        // Remove loading overlay
+        const loadingOverlay = outputSection.querySelector('.loading-overlay');
+        if (loadingOverlay) {
+          loadingOverlay.remove();
+        }
+        outputText.style.opacity = "1";
 
         // Type out the translation with animation
         typeTranslation(translation, () => {
@@ -664,8 +714,15 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       } catch (error) {
         console.error("Translation failed:", error);
+        
+        // Remove loading overlay on error
+        const loadingOverlay = outputSection.querySelector('.loading-overlay');
+        if (loadingOverlay) {
+          loadingOverlay.remove();
+        }
+        outputText.style.opacity = "1";
+        
         handleTranslationError();
-        showNotification("Translation failed. Please try again.", "error");
       }
     });
   }
@@ -838,8 +895,21 @@ document.addEventListener("DOMContentLoaded", () => {
     executeStep();
   }
 
-  // Add demo walkthrough trigger (optional - can be triggered by a button)
-  // startDemoWalkthrough(); // Uncomment to auto-start demo
+  // Demo walkthrough for presentation
+  window.startDemoWalkthrough = () => {
+    startDemoWalkthrough();
+  };
+
+  // Add demo button to dashboard header
+  const dashboardHeader = document.querySelector('.dashboard-header');
+  if (dashboardHeader) {
+    const demoButton = document.createElement('button');
+    demoButton.className = 'cta-button';
+    demoButton.style.marginTop = '1rem';
+    demoButton.textContent = '🎬 Start Demo';
+    demoButton.onclick = () => startDemoWalkthrough();
+    dashboardHeader.appendChild(demoButton);
+  }
 
   // Add CSS for demo highlighting
   if (!document.querySelector("#demo-highlight-style")) {
@@ -1226,6 +1296,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===== TRANSLATION HISTORY ===== //
+  let currentPage = 1;
+  const itemsPerPage = 5;
+  let totalHistoryItems = 0;
+
   async function storeTranslationHistory(
     originalText,
     translatedText,
@@ -1259,12 +1333,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function displayTranslationHistory() {
+  async function displayTranslationHistory(page = 1) {
     const historyContent = document.getElementById("historyContent");
     if (!historyContent) return;
 
     try {
-      const response = await fetch("/api/history");
+      const response = await fetch(`/api/history?page=${page}&limit=${itemsPerPage}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -1272,6 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const result = await response.json();
       const history = result.data || [];
+      totalHistoryItems = result.total || history.length;
 
       if (history.length === 0) {
         historyContent.innerHTML = `
@@ -1348,7 +1423,8 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
         })
-        .join("");
+        .join("") + createPaginationControls();
+
     } catch (error) {
       console.error("[v0] Error fetching translation history:", error);
       historyContent.innerHTML = `
@@ -1359,6 +1435,29 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
   }
+
+  function createPaginationControls() {
+    const totalPages = Math.ceil(totalHistoryItems / itemsPerPage);
+    if (totalPages <= 1) return "";
+
+    return `
+      <div class="pagination-controls">
+        <button class="pagination-btn" onclick="loadHistoryPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+          ← Previous
+        </button>
+        <span class="pagination-info">Page ${currentPage} of ${totalPages}</span>
+        <button class="pagination-btn" onclick="loadHistoryPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+          Next →
+        </button>
+      </div>
+    `;
+  }
+
+  window.loadHistoryPage = async (page) => {
+    if (page < 1) return;
+    currentPage = page;
+    await displayTranslationHistory(page);
+  };
 
   window.deleteHistoryItem = async (itemId) => {
     if (confirm("Are you sure you want to delete this translation?")) {
@@ -1412,22 +1511,92 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Download history functionality
+  window.downloadHistory = async () => {
+    try {
+      const response = await fetch("/api/history?export=true");
+      if (!response.ok) {
+        throw new Error("Failed to fetch history data");
+      }
+      
+      const result = await response.json();
+      const history = result.data || [];
+      
+      if (history.length === 0) {
+        showNotification("No translation history to download", "warning");
+        return;
+      }
+      
+      // Create CSV content
+      const csvContent = [
+        "Date,Original Text,Translated Text,Target Language",
+        ...history.map(item => 
+          `"${new Date(item.created_at).toLocaleString()}","${item.original_text.replace(/"/g, '""')}","${item.translated_text.replace(/"/g, '""')}","${item.target_language}"`
+        )
+      ].join("\n");
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `translation_history_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showNotification("Translation history downloaded successfully!", "success");
+    } catch (error) {
+      console.error("Error downloading history:", error);
+      showNotification("Failed to download translation history", "error");
+    }
+  };
+
+  // Copy history text functionality
+  window.copyHistoryText = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      showNotification("Text copied to clipboard!", "success");
+    }).catch(() => {
+      showNotification("Failed to copy text", "error");
+    });
+  };
+
+  // Reuse history text functionality
+  window.reuseHistoryText = (text, language) => {
+    if (inputText) {
+      inputText.value = text;
+      updateCounters(text);
+      inputText.focus();
+      
+      if (languageSelector && language !== currentLanguage) {
+        languageSelector.value = language;
+        languageSelector.dispatchEvent(new Event("change"));
+      }
+      
+      showNotification("Text loaded for translation!", "success");
+    }
+  };
+
   // Initialize history display on page load
   displayTranslationHistory();
 
   console.log(
-    "🌍 WebNew Translation Dashboard initialized with Week 8 features!"
+    "🌍 WebNew Translation Dashboard initialized with Week 11 optimizations!"
   );
   console.log("Features loaded:");
   console.log("✅ Multi-language support with 10 languages");
   console.log("✅ Live character and word counter");
   console.log("✅ Clear/Reset functionality");
   console.log("✅ Copy to clipboard");
-  console.log("✅ Backend API integration");
-  console.log("✅ Translation history storage");
-  console.log("✅ Responsive design improvements");
-  console.log("✅ Demo walkthrough capability");
+  console.log("✅ Backend API integration with consistent response structure");
+  console.log("✅ Translation history storage with pagination");
+  console.log("✅ Enhanced responsive design");
+  console.log("✅ Loading states and smooth animations");
+  console.log("✅ Improved error handling with specific messages");
+  console.log("✅ History download functionality (CSV export)");
   console.log("✅ Keyboard shortcuts (Ctrl+Enter to translate, Esc to clear)");
   console.log("✅ Sample text suggestions (double-click input when empty)");
-  console.log("✅ Enhanced accessibility and error handling");
+  console.log("✅ Enhanced accessibility and user feedback");
+  console.log("✅ Demo-ready presentation features");
 });

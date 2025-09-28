@@ -375,10 +375,16 @@
                 <div class="translation-history" id="translationHistory">
                     <div class="history-header">
                         <h3>Translation History</h3>
-                        <button id="clearHistoryButton" class="clear-history-button">
-                            <span class="button-icon">🗑️</span>
-                            <span class="button-text">Clear History</span>
-                        </button>
+                        <div class="history-actions">
+                            <button id="downloadHistoryButton" class="download-history-button" onclick="downloadHistory()">
+                                <span class="button-icon">📥</span>
+                                <span class="button-text">Download</span>
+                            </button>
+                            <button id="clearHistoryButton" class="clear-history-button">
+                                <span class="button-icon">🗑️</span>
+                                <span class="button-text">Clear History</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="history-content" id="historyContent">
                         <div class="history-empty">
