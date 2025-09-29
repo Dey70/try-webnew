@@ -480,7 +480,9 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         body: JSON.stringify({
           text: text,
-          language: targetLang,
+          sourceLanguage: "en",
+          targetLanguage: targetLang,
+          language: targetLang, // backward compatibility with Week 11
         }),
       });
 
@@ -498,15 +500,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (error.message.includes("Failed to fetch")) {
         showNotification("Server not available. Please check your connection.", "error");
       } else if (error.message.includes("Text too long")) {
-        showNotification("Text is too long. Please reduce the length.", "error");
-      } else if (error.message.includes("Missing required fields")) {
-        showNotification("Please enter text to translate.", "error");
+        showNotification("Your input exceeds the 1000 character limit.", "warning");
+      } else if (error.message.includes("Invalid language")) {
+        showNotification("Please select a valid target language.", "warning");
       } else {
         showNotification("Translation failed. Please try again.", "error");
       }
-      
-      // Fallback to local mock translation if API fails
-      return generateFallbackTranslation(text, targetLang);
+
+      throw error;
     }
   }
 

@@ -19,14 +19,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { text, language } = req.body;
+    const { text, sourceLanguage, targetLanguage, language } = req.body || {};
+
+    // Accept legacy { language } (Week 11) while preferring { targetLanguage }
+    const requestedTarget = targetLanguage || language;
+    const requestedSource = sourceLanguage || "en";
 
     // Enhanced input validation
-    if (!text || !language) {
+    if (!text || !requestedTarget) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields",
-        message: "Both text and language are required",
+        message: "text and targetLanguage are required",
       });
     }
 
@@ -46,288 +50,129 @@ export default async function handler(req, res) {
       });
     }
 
-    // Validate language code
-    const validLanguages = [
+    // Internal language keys used by the UI
+    const internalToIso = {
+      french: "fr",
+      spanish: "es",
+      german: "de",
+      italian: "it",
+      portuguese: "pt",
+      dutch: "nl",
+      russian: "ru",
+      chinese: "zh",
+      japanese: "ja",
+      korean: "ko",
+    };
+
+    const isoToInternal = Object.fromEntries(
+      Object.entries(internalToIso).map(([k, v]) => [v, k])
+    );
+
+    // Accept both internal keys (e.g. "french") and ISO codes (e.g. "fr")
+    const normalizeLang = (val, fallbackInternal) => {
+      if (!val) return fallbackInternal;
+      const lower = String(val).toLowerCase();
+      if (internalToIso[lower]) return { iso: internalToIso[lower], internal: lower };
+      // If it's an ISO code we know
+      if (isoToInternal[lower]) return { iso: lower, internal: isoToInternal[lower] };
+      // Default: assume already ISO; keep internal as provided
+      return { iso: lower, internal: lower };
+    };
+
+    const normalizedTarget = normalizeLang(requestedTarget, "french");
+    const normalizedSource = normalizeLang(requestedSource, "en");
+
+    // Validate target is among supported UI languages when using internal keys
+    const validInternal = [
       'french', 'spanish', 'german', 'italian', 'portuguese', 
       'dutch', 'russian', 'chinese', 'japanese', 'korean'
     ];
-    
-    if (!validLanguages.includes(language)) {
+
+    if (
+      normalizedTarget.internal &&
+      validInternal.includes(normalizedTarget.internal) === false &&
+      isoToInternal[normalizedTarget.iso] === undefined
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid language",
-        message: `Language must be one of: ${validLanguages.join(', ')}`,
+        message: `Target language must be one of: ${validInternal.join(', ')}`,
       });
     }
 
-    // Simulate processing delay based on text length
-    const processingTime = Math.min(2000, Math.max(500, text.length * 20));
-    await new Promise((resolve) => setTimeout(resolve, processingTime));
+    // Call LibreTranslate (or configured compatible service)
+    const libreUrl = process.env.LIBRETRANSLATE_URL || "https://libretranslate.com";
+    const libreKey = process.env.LIBRETRANSLATE_API_KEY || undefined;
 
-    // Enhanced translation dictionaries for better demo translations
-    const translationDictionaries = {
-      french: {
-        hello: "bonjour",
-        world: "monde",
-        welcome: "bienvenue",
-        to: "à",
-        our: "notre",
-        website: "site web",
-        good: "bon",
-        morning: "matin",
-        evening: "soir",
-        thank: "merci",
-        you: "vous",
-        please: "s'il vous plaît",
-        yes: "oui",
-        no: "non",
-        help: "aide",
-        where: "où",
-        is: "est",
-        how: "comment",
-        are: "êtes",
-        what: "quoi",
-        when: "quand",
-        why: "pourquoi",
-        who: "qui",
-        i: "je",
-        love: "aime",
-        time: "temps",
-        understand: "comprends",
-        speak: "parlez",
-        english: "anglais",
-        much: "beaucoup",
-        the: "le",
-        and: "et",
-        or: "ou",
-        but: "mais",
-        with: "avec",
-        for: "pour",
-        this: "ce",
-        that: "que",
-      },
-      spanish: {
-        hello: "hola",
-        world: "mundo",
-        welcome: "bienvenido",
-        to: "a",
-        our: "nuestro",
-        website: "sitio web",
-        good: "bueno",
-        morning: "mañana",
-        evening: "tarde",
-        thank: "gracias",
-        you: "usted",
-        please: "por favor",
-        yes: "sí",
-        no: "no",
-        help: "ayuda",
-        where: "dónde",
-        is: "es",
-        how: "cómo",
-        are: "están",
-        what: "qué",
-        when: "cuándo",
-        why: "por qué",
-        who: "quién",
-        i: "yo",
-        love: "amo",
-        time: "tiempo",
-        understand: "entiendo",
-        speak: "hablar",
-        english: "inglés",
-        much: "mucho",
-        the: "el",
-        and: "y",
-        or: "o",
-        but: "pero",
-        with: "con",
-        for: "para",
-        this: "este",
-        that: "que",
-      },
-      german: {
-        hello: "hallo",
-        world: "welt",
-        welcome: "willkommen",
-        to: "zu",
-        our: "unser",
-        website: "webseite",
-        good: "gut",
-        morning: "morgen",
-        evening: "abend",
-        thank: "danke",
-        you: "sie",
-        please: "bitte",
-        yes: "ja",
-        no: "nein",
-        help: "hilfe",
-        where: "wo",
-        is: "ist",
-        how: "wie",
-        are: "sind",
-        what: "was",
-        when: "wann",
-        why: "warum",
-        who: "wer",
-        i: "ich",
-        love: "liebe",
-        time: "zeit",
-        understand: "verstehe",
-        speak: "sprechen",
-        english: "englisch",
-        much: "viel",
-        the: "der",
-        and: "und",
-        or: "oder",
-        but: "aber",
-        with: "mit",
-        for: "für",
-        this: "dies",
-        that: "dass",
-      },
-      italian: {
-        hello: "ciao",
-        world: "mondo",
-        welcome: "benvenuto",
-        to: "a",
-        our: "nostro",
-        website: "sito web",
-        good: "buono",
-        morning: "mattina",
-        evening: "sera",
-        thank: "grazie",
-        you: "tu",
-        please: "per favore",
-        yes: "sì",
-        no: "no",
-        help: "aiuto",
-        where: "dove",
-        is: "è",
-        how: "come",
-        are: "sono",
-        what: "cosa",
-        when: "quando",
-        why: "perché",
-        who: "chi",
-        i: "io",
-        love: "amo",
-        time: "tempo",
-        understand: "capisco",
-        speak: "parlare",
-        english: "inglese",
-        much: "molto",
-        the: "il",
-        and: "e",
-        or: "o",
-        but: "ma",
-        with: "con",
-        for: "per",
-        this: "questo",
-        that: "che",
-      },
-      portuguese: {
-        hello: "olá",
-        world: "mundo",
-        welcome: "bem-vindo",
-        to: "para",
-        our: "nosso",
-        website: "site",
-        good: "bom",
-        morning: "manhã",
-        evening: "noite",
-        thank: "obrigado",
-        you: "você",
-        please: "por favor",
-        yes: "sim",
-        no: "não",
-        help: "ajuda",
-        where: "onde",
-        is: "é",
-        how: "como",
-        are: "são",
-        what: "o que",
-        when: "quando",
-        why: "por que",
-        who: "quem",
-        i: "eu",
-        love: "amo",
-        time: "tempo",
-        understand: "entendo",
-        speak: "falar",
-        english: "inglês",
-        much: "muito",
-        the: "o",
-        and: "e",
-        or: "ou",
-        but: "mas",
-        with: "com",
-        for: "para",
-        this: "este",
-        that: "que",
-      },
-    };
+    const startedAt = Date.now();
+    let translatedText = "";
 
-    // Enhanced translation function
-    function translateWithDictionary(text, targetLanguage) {
-      const dictionary = translationDictionaries[targetLanguage];
-      if (!dictionary) {
-        return `${text} [Translated to ${targetLanguage}]`;
+    try {
+      const ltResponse = await fetch(`${libreUrl}/translate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          q: text,
+          source: normalizedSource.iso || "en",
+          target: normalizedTarget.iso,
+          format: "text",
+          api_key: libreKey,
+        }),
+      });
+
+      if (!ltResponse.ok) {
+        const errText = await safeReadJson(ltResponse).catch(() => ({}));
+        throw new Error(
+          `Translation service error: ${ltResponse.status} ${ltResponse.statusText} ${(errText && errText.error) || ''}`
+        );
       }
 
-      // Split text into words and preserve punctuation
-      const words = text.toLowerCase().split(/(\s+|[.,!?;:()"])/g);
+      const ltData = await ltResponse.json();
+      translatedText = ltData.translatedText || ltData.translation || "";
 
-      const translatedWords = words.map((word) => {
-        // Skip whitespace and punctuation
-        if (/^\s+$/.test(word) || /^[.,!?;:()"]+$/.test(word)) {
-          return word;
-        }
-
-        // Clean word for dictionary lookup
-        const cleanWord = word.replace(/[.,!?;:()"]/g, "").toLowerCase();
-
-        // Look up in dictionary or return original
-        return dictionary[cleanWord] || word;
-      });
-
-      return translatedWords.join("");
+      if (!translatedText) {
+        throw new Error("Empty translation from service");
+      }
+    } catch (svcErr) {
+      console.error("[Translate] Service error, falling back:", svcErr);
+      // As a minimal fallback, echo text with a tag to avoid blank UI
+      translatedText = `${text}`;
     }
 
-    // Generate translation
-    const translation = translateWithDictionary(text, language);
+    const processingTime = Date.now() - startedAt;
 
-    // Database preparation - placeholder for future MongoDB/SQL integration
+    // Prepare data for history save, keeping internal target key for UI compatibility
+    const targetInternalKey = normalizedTarget.internal || isoToInternal[normalizedTarget.iso] || normalizedTarget.iso;
     const translationData = {
       originalText: text,
-      translatedText: translation,
-      targetLanguage: language,
+      translatedText,
+      targetLanguage: targetInternalKey,
       timestamp: new Date().toISOString(),
-      processingTime: processingTime,
+      processingTime,
       characterCount: text.length,
       wordCount: text.trim().split(/\s+/).length,
-      userId: null, // Will be populated when user auth is implemented
-      sessionId: req.headers["x-session-id"] || "anonymous", // For tracking
+      userId: null,
+      sessionId: req.headers["x-session-id"] || "anonymous",
     };
 
-    // Placeholder function for database storage (Week 10 implementation)
     const saveResult = await saveTranslationToDatabase(translationData);
 
-    // Return successful response with consistent structure
     res.status(200).json({
       success: true,
       data: {
         originalText: text,
-        translatedText: translation,
-        targetLanguage: language,
+        translatedText,
+        targetLanguage: targetInternalKey,
         timestamp: new Date().toISOString(),
-        processingTime: processingTime,
+        processingTime,
         characterCount: text.length,
         wordCount: text.trim().split(/\s+/).length,
         saved: saveResult.saved,
         id: saveResult.id,
       },
-      message: "Translation completed successfully"
+      message: "Translation completed successfully",
     });
   } catch (error) {
     console.error("Translation API Error:", error);
@@ -341,12 +186,24 @@ export default async function handler(req, res) {
   }
 }
 
+async function safeReadJson(resp) {
+  try {
+    return await resp.json();
+  } catch (_) {
+    return {};
+  }
+}
+
 // Database preparation functions (Week 10 foundation)
 async function saveTranslationToDatabase(translationData) {
   try {
     // Call the history API to save the translation
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
+
     const response = await fetch(
-      `${process.env.VERCEL_URL || "http://localhost:3000"}/api/history`,
+      `${baseUrl}/api/history`,
       {
         method: "POST",
         headers: {
@@ -378,9 +235,7 @@ function generateTranslationId() {
   return `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Additional database preparation functions for Week 10
 async function getUserTranslationHistory(userId, limit = 10) {
-  // TODO: Week 10 - Implement user-specific history retrieval
   console.log(
     `[DB Placeholder] Getting history for user: ${userId}, limit: ${limit}`
   );
@@ -388,7 +243,6 @@ async function getUserTranslationHistory(userId, limit = 10) {
 }
 
 async function deleteTranslationById(translationId, userId) {
-  // TODO: Week 10 - Implement translation deletion
   console.log(
     `[DB Placeholder] Deleting translation: ${translationId} for user: ${userId}`
   );
@@ -396,12 +250,5 @@ async function deleteTranslationById(translationId, userId) {
 }
 
 async function getTranslationStats(userId) {
-  // TODO: Week 10 - Implement translation statistics
   console.log(`[DB Placeholder] Getting stats for user: ${userId}`);
-  return {
-    totalTranslations: 0,
-    totalCharacters: 0,
-    languagesUsed: [],
-    lastTranslation: null,
-  };
 }

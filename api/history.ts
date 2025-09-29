@@ -1,10 +1,8 @@
-import { createClient } from "../lib/supabase/server";
-import type { NextApiRequest, NextApiResponse } from "next";
-import type { CreateTranslationRequest } from "../types/translation";
+import { createClient } from "../lib/superbase/server";
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req,
+  res
 ) {
   // Set CORS headers for cross-origin requests
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -28,35 +26,26 @@ export default async function handler(
         const limitNum = parseInt(limit as string) || 10;
         const offset = (pageNum - 1) * limitNum;
 
-        // For export, get all records
         const query = supabase
           .from("translation_history")
-          .select("*")
+          .select("*", { count: "exact" })
           .order("created_at", { ascending: false });
 
         if (isExport === "true") {
-          // Export all records
           const { data: allHistory, error: fetchError } = await query;
-          
-          if (fetchError) {
-            throw fetchError;
-          }
-
+          if (fetchError) throw fetchError;
           res.status(200).json({
             success: true,
             data: allHistory || [],
             count: allHistory?.length || 0,
-            message: "Export data retrieved successfully"
+            message: "Export data retrieved successfully",
           });
         } else {
-          // Paginated results
-          const { data: history, error: fetchError, count } = await query
-            .range(offset, offset + limitNum - 1);
-
-          if (fetchError) {
-            throw fetchError;
-          }
-
+          const { data: history, error: fetchError, count } = await query.range(
+            offset,
+            offset + limitNum - 1
+          );
+          if (fetchError) throw fetchError;
           res.status(200).json({
             success: true,
             data: history || [],
@@ -64,20 +53,14 @@ export default async function handler(
             total: count || 0,
             page: pageNum,
             limit: limitNum,
-            totalPages: Math.ceil((count || 0) / limitNum)
+            totalPages: Math.ceil((count || 0) / limitNum),
           });
         }
         break;
 
       case "POST":
-        // Create new translation history entry
-        const {
-          original_text,
-          translated_text,
-          target_language,
-        }: CreateTranslationRequest = req.body;
+        const { original_text, translated_text, target_language } = req.body;
 
-        // Enhanced input validation
         if (!original_text || !translated_text || !target_language) {
           return res.status(400).json({
             success: false,
@@ -95,17 +78,24 @@ export default async function handler(
           });
         }
 
-        // Validate language code
         const validLanguages = [
-          'french', 'spanish', 'german', 'italian', 'portuguese', 
-          'dutch', 'russian', 'chinese', 'japanese', 'korean'
+          "french",
+          "spanish",
+          "german",
+          "italian",
+          "portuguese",
+          "dutch",
+          "russian",
+          "chinese",
+          "japanese",
+          "korean",
         ];
-        
+
         if (!validLanguages.includes(target_language)) {
           return res.status(400).json({
             success: false,
             error: "Invalid language",
-            message: `Target language must be one of: ${validLanguages.join(', ')}`,
+            message: `Target language must be one of: ${validLanguages.join(", ")}`,
           });
         }
 
@@ -119,9 +109,7 @@ export default async function handler(
           .select()
           .single();
 
-        if (insertError) {
-          throw insertError;
-        }
+        if (insertError) throw insertError;
 
         res.status(201).json({
           success: true,
@@ -131,9 +119,7 @@ export default async function handler(
         break;
 
       case "DELETE":
-        // Delete translation history entry by ID
         const { id } = req.query;
-
         if (!id || typeof id !== "string") {
           return res.status(400).json({
             success: false,
@@ -146,10 +132,7 @@ export default async function handler(
           .from("translation_history")
           .delete()
           .eq("id", id);
-
-        if (deleteError) {
-          throw deleteError;
-        }
+        if (deleteError) throw deleteError;
 
         res.status(200).json({
           success: true,
