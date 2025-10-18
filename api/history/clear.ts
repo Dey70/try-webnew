@@ -24,6 +24,16 @@ export default async function handler(
   }
 
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co') {
+      console.log("[Clear History] Supabase not configured, returning success response");
+      return res.status(200).json({
+        success: true,
+        data: null,
+        message: "Supabase not configured - no database operations performed",
+      });
+    }
+
     const supabase = await createClient();
 
     // Delete all translation history entries

@@ -16,6 +16,42 @@ export default async function handler(
   }
 
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co') {
+      console.log("[History] Supabase not configured, returning empty response");
+      
+      switch (req.method) {
+        case "GET":
+          return res.status(200).json({
+            success: true,
+            data: [],
+            count: 0,
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0,
+            message: "Supabase not configured - no history available"
+          });
+        case "POST":
+          return res.status(200).json({
+            success: true,
+            data: { id: 'demo-' + Date.now() },
+            message: "Supabase not configured - translation not saved to database"
+          });
+        case "DELETE":
+          return res.status(200).json({
+            success: true,
+            message: "Supabase not configured - no database operations performed"
+          });
+        default:
+          return res.status(405).json({
+            success: false,
+            error: "Method not allowed",
+            message: `Method ${req.method} is not supported`,
+          });
+      }
+    }
+
     const supabase = await createClient();
 
     switch (req.method) {
