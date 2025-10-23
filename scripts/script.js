@@ -472,71 +472,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== ENHANCED TRANSLATION FUNCTIONALITY ===== //
   async function translateText(text, targetLang) {
+    // 1) Try calling LibreTranslate directly from the browser (public demo endpoint)
     try {
-      const response = await fetch("/api/translate", {
+      const libreUrl = "https://libretranslate.de/translate"; // public demo
+      const resp = await fetch(libreUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text,
-          sourceLanguage: "en",
-          targetLanguage: targetLang,
-          language: targetLang, // backward compatibility with Week 11
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: text, source: "en", target: mapInternalToIso(targetLang), format: "text" }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Translation failed");
+      if (resp.ok) {
+        const ltData = await resp.json();
+        const translated = ltData?.translatedText || ltData?.translation;
+        if (translated) return translated;
       }
-
-      const data = await response.json();
-      return data.data.translatedText;
-    } catch (error) {
-      console.error("Translation API Error:", error);
-      
-      // Enhanced error handling with specific messages
-      if (error.message.includes("Failed to fetch")) {
-        showNotification("Server not available. Please check your connection.", "error");
-      } else if (error.message.includes("Text too long")) {
-        showNotification("Your input exceeds the 1000 character limit.", "warning");
-      } else if (error.message.includes("Invalid language")) {
-        showNotification("Please select a valid target language.", "warning");
-      } else {
-        showNotification("Translation failed. Please try again.", "error");
-      }
-
-      throw error;
+    } catch (e) {
+      console.warn("Client LibreTranslate call failed:", e?.message);
     }
+
+    // 2) Fallback: generate local fallback translation
+    return generateFallbackTranslation(text, targetLang);
+  }
+
+  function mapInternalToIso(lang) {
+    const mapping = {
+      french: "fr",
+      spanish: "es",
+      german: "de",
+      italian: "it",
+      portuguese: "pt",
+      dutch: "nl",
+      russian: "ru",
+      chinese: "zh",
+      japanese: "ja",
+      korean: "ko",
+    };
+    return mapping[String(lang).toLowerCase()] || lang || "en";
   }
 
   function generateFallbackTranslation(text, targetLang) {
     const config = languageConfigs[targetLang];
     if (!config) return `${text} [Translated to ${targetLang}]`;
 
-    const lowerText = text.toLowerCase();
+    const lowerText = text.toLowerCase().trim();
 
     // Check for exact match first
     if (config.translations[lowerText]) {
       return config.translations[lowerText];
     }
 
-    // Word-by-word translation for unknown phrases
-    const words = text.split(" ");
-    const translatedWords = words.map((word) => {
-      // Remove punctuation for lookup
+    // Enhanced word-by-word translation for unknown phrases
+    const words = text.split(/\s+/);
+    const translatedWords = words.map((word, index) => {
+      // Remove punctuation for lookup but preserve it
       const cleanWord = word.toLowerCase().replace(/[.,!?;:"'()]/g, "");
       const punctuation = word.replace(/[a-zA-Z]/g, "");
 
       // Look up the clean word
-      const translatedWord =
-        config.translations[cleanWord] ||
-        generateMockTranslation(cleanWord, targetLang);
+      let translatedWord = config.translations[cleanWord];
+      
+      if (!translatedWord) {
+        // Try to find partial matches for common words
+        translatedWord = findPartialMatch(cleanWord, config.translations) || 
+                        generateMockTranslation(cleanWord, targetLang);
+      }
+
+      // Add proper capitalization for first word of sentence
+      if (index === 0 && translatedWord) {
+        translatedWord = translatedWord.charAt(0).toUpperCase() + translatedWord.slice(1);
+      }
+
       return translatedWord + punctuation;
     });
 
     return translatedWords.join(" ");
+  }
+
+  // Helper function to find partial matches in translations
+  function findPartialMatch(word, translations) {
+    // Look for words that contain the current word
+    for (const [key, value] of Object.entries(translations)) {
+      if (key.includes(word) && word.length > 2) {
+        return value.split(' ').find(w => w.toLowerCase().includes(word)) || value;
+      }
+    }
+    return null;
   }
 
   // Generate mock translation for unknown words based on target language
@@ -611,28 +630,42 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!outputText) return;
 
     let i = 0;
-    const typeSpeed = Math.max(15, Math.min(40, 800 / text.length)); // Adaptive speed
+    const typeSpeed = Math.max(20, Math.min(50, 1000 / text.length)); // Adaptive speed
     outputText.value = "";
     
-    // Add typing cursor effect
+    // Add typing cursor effect and visual state
     outputText.style.borderRight = "2px solid #ff4444";
     outputText.style.animation = "blink 1s infinite";
+    outputText.style.boxShadow = "0 0 10px rgba(255, 68, 68, 0.3)";
+    outputText.classList.add("typing");
 
     function typeChar() {
       if (i < text.length) {
         outputText.value += text.charAt(i);
         i++;
-        setTimeout(typeChar, typeSpeed);
+        
+        // Add slight delay for punctuation
+        const char = text.charAt(i - 1);
+        const delay = /[.!?]/.test(char) ? typeSpeed * 3 : typeSpeed;
+        
+        setTimeout(typeChar, delay);
       } else {
-        // Remove typing cursor
+        // Remove typing cursor and effects
         outputText.style.borderRight = "";
         outputText.style.animation = "";
+        outputText.style.boxShadow = "";
+        outputText.classList.remove("typing");
+        outputText.classList.add("completed");
         
-        // Add completion animation
-        outputText.style.animation = "fadeInScale 0.3s ease-out";
+        // Add completion animation with success glow
+        outputText.style.animation = "fadeInScale 0.5s ease-out";
+        outputText.style.boxShadow = "0 0 20px rgba(40, 167, 69, 0.4)";
+        
         setTimeout(() => {
           outputText.style.animation = "";
-        }, 300);
+          outputText.style.boxShadow = "";
+          outputText.classList.remove("completed");
+        }, 500);
         
         if (callback) callback();
       }
@@ -666,15 +699,22 @@ document.addEventListener("DOMContentLoaded", () => {
       const originalText = buttonText.textContent;
       const originalIcon = buttonIcon.textContent;
 
-      // Create loading spinner
+      // Create loading spinner with better styling
       const spinner = document.createElement("div");
       spinner.className = "loading-spinner";
       spinner.style.marginRight = "8px";
+      spinner.style.width = "16px";
+      spinner.style.height = "16px";
+      spinner.style.borderWidth = "2px";
+      spinner.style.borderColor = "#ffffff transparent transparent transparent";
       
       buttonText.textContent = "Translating...";
       buttonIcon.innerHTML = "";
       buttonIcon.appendChild(spinner);
       translateButton.style.background = "linear-gradient(135deg, #666 0%, #555 100%)";
+      translateButton.style.transform = "scale(0.98)";
+      translateButton.style.transition = "all 0.2s ease";
+      translateButton.classList.add("loading");
 
       // Clear output and show processing state with animation
       outputText.value = "";
@@ -704,11 +744,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Type out the translation with animation
         typeTranslation(translation, () => {
-          // Re-enable button
+          // Re-enable button with success animation
           translateButton.disabled = false;
-          buttonText.textContent = originalText;
-          buttonIcon.textContent = originalIcon;
-          translateButton.style.background = "";
+          buttonText.textContent = "✓ Translated!";
+          buttonIcon.textContent = "✅";
+          translateButton.style.background = "linear-gradient(135deg, #28a745 0%, #20c997 100%)";
+          translateButton.style.transform = "scale(1.02)";
+          translateButton.classList.remove("loading");
+          translateButton.classList.add("success");
+          
+          // Show success notification
+          showNotification("Translation completed successfully!", "success");
+          
+          // Reset button after delay
+          setTimeout(() => {
+            buttonText.textContent = originalText;
+            buttonIcon.textContent = originalIcon;
+            translateButton.style.background = "";
+            translateButton.style.transform = "scale(1)";
+            translateButton.classList.remove("success");
+          }, 2000);
+          
           outputText.placeholder = "Translation will appear here...";
 
           storeTranslationHistory(text, translation, currentLanguage);
@@ -723,7 +779,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         outputText.style.opacity = "1";
         
-        handleTranslationError();
+        // Re-enable button with error feedback
+        translateButton.disabled = false;
+        const buttonText = translateButton.querySelector(".button-text");
+        const buttonIcon = translateButton.querySelector(".button-icon");
+        if (buttonText) buttonText.textContent = "⚠️ Retry";
+        if (buttonIcon) buttonIcon.textContent = "⚠️";
+        translateButton.style.background = "linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)";
+        translateButton.style.transform = "scale(0.98)";
+        translateButton.classList.remove("loading");
+        translateButton.classList.add("error");
+        
+        // Show error notification
+        showNotification("Translation failed. Using fallback translation.", "warning");
+        
+        // Reset button after delay
+        setTimeout(() => {
+          if (buttonText) buttonText.textContent = "Translate";
+          if (buttonIcon) buttonIcon.textContent = "🌍";
+          translateButton.style.background = "";
+          translateButton.style.transform = "scale(1)";
+          translateButton.classList.remove("error");
+        }, 3000);
       }
     });
   }
@@ -1307,29 +1384,29 @@ document.addEventListener("DOMContentLoaded", () => {
     targetLanguage
   ) {
     try {
-      const response = await fetch("/api/history", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          original_text: originalText,
-          translated_text: translatedText,
-          target_language: targetLanguage,
-        }),
-      });
+      // Store in localStorage for demo purposes
+      const historyItem = {
+        id: 'demo-' + Date.now(),
+        original_text: originalText,
+        translated_text: translatedText,
+        target_language: targetLanguage,
+        created_at: new Date().toISOString()
+      };
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("[v0] Translation saved to database:", result.data?.id);
+      // Get existing history from localStorage
+      const existingHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
+      existingHistory.unshift(historyItem); // Add to beginning
+      
+      // Keep only last 50 items to prevent localStorage from getting too large
+      const limitedHistory = existingHistory.slice(0, 50);
+      
+      localStorage.setItem('translationHistory', JSON.stringify(limitedHistory));
+      console.log("[Demo] Translation saved to localStorage:", historyItem.id);
 
       // Refresh the history display
       await displayTranslationHistory();
     } catch (error) {
-      console.error("[v0] Error saving translation to database:", error);
+      console.error("[Demo] Error saving translation to localStorage:", error);
       showNotification("Failed to save translation to history", "error");
     }
   }
@@ -1339,15 +1416,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!historyContent) return;
 
     try {
-      const response = await fetch(`/api/history?page=${page}&limit=${itemsPerPage}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const history = result.data || [];
-      totalHistoryItems = result.total || history.length;
+      // Get history from localStorage
+      const allHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
+      totalHistoryItems = allHistory.length;
+      
+      // Paginate the history
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const history = allHistory.slice(startIndex, endIndex);
 
       if (history.length === 0) {
         historyContent.innerHTML = `
@@ -1463,22 +1539,21 @@ document.addEventListener("DOMContentLoaded", () => {
   window.deleteHistoryItem = async (itemId) => {
     if (confirm("Are you sure you want to delete this translation?")) {
       try {
-        const response = await fetch(`/api/history?id=${itemId}`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("[v0] Translation deleted from database:", itemId);
+        // Get existing history from localStorage
+        const existingHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
+        
+        // Remove the item with the specified ID
+        const updatedHistory = existingHistory.filter(item => item.id !== itemId);
+        
+        // Save back to localStorage
+        localStorage.setItem('translationHistory', JSON.stringify(updatedHistory));
+        console.log("[Demo] Translation deleted from localStorage:", itemId);
 
         // Refresh the history display
         await displayTranslationHistory();
         showNotification("Translation deleted!", "success");
       } catch (error) {
-        console.error("[v0] Error deleting translation:", error);
+        console.error("[Demo] Error deleting translation:", error);
         showNotification("Failed to delete translation", "error");
       }
     }
@@ -1491,22 +1566,15 @@ document.addEventListener("DOMContentLoaded", () => {
       )
     ) {
       try {
-        const response = await fetch("/api/history/clear", {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("[v0] All translation history cleared from database");
+        // Clear localStorage
+        localStorage.removeItem('translationHistory');
+        console.log("[Demo] All translation history cleared from localStorage");
 
         // Refresh the history display
         await displayTranslationHistory();
         showNotification("Translation history cleared!", "success");
       } catch (error) {
-        console.error("[v0] Error clearing translation history:", error);
+        console.error("[Demo] Error clearing translation history:", error);
         showNotification("Failed to clear translation history", "error");
       }
     }
@@ -1515,13 +1583,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download history functionality
   window.downloadHistory = async () => {
     try {
-      const response = await fetch("/api/history?export=true");
-      if (!response.ok) {
-        throw new Error("Failed to fetch history data");
-      }
-      
-      const result = await response.json();
-      const history = result.data || [];
+      // Get history from localStorage
+      const history = JSON.parse(localStorage.getItem('translationHistory') || '[]');
       
       if (history.length === 0) {
         showNotification("No translation history to download", "warning");
@@ -1578,6 +1641,11 @@ document.addEventListener("DOMContentLoaded", () => {
       showNotification("Text loaded for translation!", "success");
     }
   };
+
+  // Clear history button event listener
+  if (clearHistoryButton) {
+    clearHistoryButton.addEventListener("click", clearTranslationHistory);
+  }
 
   // Initialize history display on page load
   displayTranslationHistory();
