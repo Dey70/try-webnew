@@ -117,6 +117,18 @@ document.addEventListener("DOMContentLoaded", () => {
         what: "quoi",
         who: "qui",
         how: "comment",
+        "good afternoon": "bon après-midi",
+        "good night": "bonne nuit",
+        "see you": "à bientôt",
+        "take care": "prends soin",
+        "have fun": "amuse-toi bien",
+        "be careful": "fais attention",
+        "i understand": "je comprends",
+        "i don't know": "je ne sais pas",
+        "excuse me": "excusez-moi",
+        "i'm sorry": "je suis désolé",
+        "you're welcome": "de rien",
+        "nice to meet you": "enchanté de vous rencontrer",
       },
     },
     spanish: {
@@ -147,6 +159,18 @@ document.addEventListener("DOMContentLoaded", () => {
         what: "qué",
         who: "quién",
         how: "cómo",
+        "good afternoon": "buenas tardes",
+        "good night": "buenas noches",
+        "see you": "hasta luego",
+        "take care": "cuídate",
+        "have fun": "diviértete",
+        "be careful": "ten cuidado",
+        "i understand": "entiendo",
+        "i don't know": "no sé",
+        "excuse me": "disculpe",
+        "i'm sorry": "lo siento",
+        "you're welcome": "de nada",
+        "nice to meet you": "encantado de conocerte",
       },
     },
     german: {
@@ -472,25 +496,77 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== ENHANCED TRANSLATION FUNCTIONALITY ===== //
   async function translateText(text, targetLang) {
-    // 1) Try calling LibreTranslate directly from the browser (public demo endpoint)
-    try {
-      const libreUrl = "https://libretranslate.de/translate"; // public demo
-      const resp = await fetch(libreUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: text, source: "en", target: mapInternalToIso(targetLang), format: "text" }),
-      });
-      if (resp.ok) {
-        const ltData = await resp.json();
-        const translated = ltData?.translatedText || ltData?.translation;
-        if (translated) return translated;
+    // 1) Try multiple LibreTranslate endpoints for better reliability
+    const libreEndpoints = [
+      "https://libretranslate.de/translate",
+      "https://translate.argosopentech.com/translate",
+      "https://libretranslate.com/translate"
+    ];
+
+    for (const endpoint of libreEndpoints) {
+      try {
+        const resp = await fetch(endpoint, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          },
+          body: JSON.stringify({ 
+            q: text, 
+            source: "en", 
+            target: mapInternalToIso(targetLang), 
+            format: "text" 
+          }),
+        });
+        
+        if (resp.ok) {
+          const ltData = await resp.json();
+          const translated = ltData?.translatedText || ltData?.translation;
+          if (translated && translated.trim() !== text.trim()) {
+            console.log(`Translation successful via ${endpoint}`);
+            return translated;
+          }
+        }
+      } catch (e) {
+        console.warn(`LibreTranslate endpoint ${endpoint} failed:`, e?.message);
       }
-    } catch (e) {
-      console.warn("Client LibreTranslate call failed:", e?.message);
     }
 
-    // 2) Fallback: generate local fallback translation
-    return generateFallbackTranslation(text, targetLang);
+    // 2) Try Google Translate API (if available)
+    try {
+      const googleTranslated = await tryGoogleTranslate(text, targetLang);
+      if (googleTranslated) return googleTranslated;
+    } catch (e) {
+      console.warn("Google Translate fallback failed:", e?.message);
+    }
+
+    // 3) Enhanced fallback: generate improved local translation
+    return generateEnhancedFallbackTranslation(text, targetLang);
+  }
+
+  // Google Translate fallback function
+  async function tryGoogleTranslate(text, targetLang) {
+    try {
+      const targetCode = mapInternalToIso(targetLang);
+      const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+      
+      const response = await fetch(googleUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data[0] && data[0][0] && data[0][0][0]) {
+          return data[0].map(item => item[0]).join('');
+        }
+      }
+    } catch (e) {
+      console.warn("Google Translate failed:", e?.message);
+    }
+    return null;
   }
 
   function mapInternalToIso(lang) {
@@ -509,7 +585,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return mapping[String(lang).toLowerCase()] || lang || "en";
   }
 
-  function generateFallbackTranslation(text, targetLang) {
+  function generateEnhancedFallbackTranslation(text, targetLang) {
     const config = languageConfigs[targetLang];
     if (!config) return `${text} [Translated to ${targetLang}]`;
 
@@ -520,7 +596,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return config.translations[lowerText];
     }
 
-    // Enhanced word-by-word translation for unknown phrases
+    // Enhanced phrase matching for common expressions
+    const phraseMatch = findPhraseMatch(text, config.translations);
+    if (phraseMatch) {
+      return phraseMatch;
+    }
+
+    // Enhanced word-by-word translation with better context
     const words = text.split(/\s+/);
     const translatedWords = words.map((word, index) => {
       // Remove punctuation for lookup but preserve it
@@ -533,7 +615,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!translatedWord) {
         // Try to find partial matches for common words
         translatedWord = findPartialMatch(cleanWord, config.translations) || 
-                        generateMockTranslation(cleanWord, targetLang);
+                        findContextualMatch(cleanWord, words, index, config.translations) ||
+                        generateSmartMockTranslation(cleanWord, targetLang, words, index);
       }
 
       // Add proper capitalization for first word of sentence
@@ -547,6 +630,48 @@ document.addEventListener("DOMContentLoaded", () => {
     return translatedWords.join(" ");
   }
 
+  // Enhanced phrase matching
+  function findPhraseMatch(text, translations) {
+    const phrases = [
+      "how are you", "good morning", "good evening", "thank you very much",
+      "you're welcome", "excuse me", "i'm sorry", "nice to meet you",
+      "have a good day", "see you later", "take care", "good luck"
+    ];
+    
+    for (const phrase of phrases) {
+      if (text.toLowerCase().includes(phrase)) {
+        const key = phrase.toLowerCase();
+        if (translations[key]) {
+          return text.toLowerCase().replace(phrase, translations[key]);
+        }
+      }
+    }
+    return null;
+  }
+
+  // Contextual word matching
+  function findContextualMatch(word, allWords, index, translations) {
+    // Look for context clues
+    const context = {
+      before: allWords[index - 1]?.toLowerCase(),
+      after: allWords[index + 1]?.toLowerCase(),
+      current: word
+    };
+
+    // Common patterns
+    if (context.before === "i" && word === "am") {
+      return translations["am"] || "suis";
+    }
+    if (context.before === "you" && word === "are") {
+      return translations["are"] || "êtes";
+    }
+    if (word === "the" && context.after) {
+      return translations["the"] || "le";
+    }
+
+    return null;
+  }
+
   // Helper function to find partial matches in translations
   function findPartialMatch(word, translations) {
     // Look for words that contain the current word
@@ -558,71 +683,169 @@ document.addEventListener("DOMContentLoaded", () => {
     return null;
   }
 
-  // Generate mock translation for unknown words based on target language
-  function generateMockTranslation(word, targetLang) {
+  // Smart mock translation with better accuracy
+  function generateSmartMockTranslation(word, targetLang, allWords, index) {
     if (word.length < 2) return word;
 
-    const mockPatterns = {
+    // Enhanced patterns with more realistic translations
+    const smartPatterns = {
       french: {
-        suffixes: ["é", "er", "tion", "ique", "eux", "euse", "ment"],
-        prefixes: ["dé", "pré", "sur", "sous"],
+        suffixes: ["é", "er", "tion", "ique", "eux", "euse", "ment", "age", "ure"],
+        prefixes: ["dé", "pré", "sur", "sous", "re", "co"],
+        commonWords: {
+          "hello": "bonjour", "world": "monde", "love": "amour", "time": "temps",
+          "day": "jour", "night": "nuit", "home": "maison", "work": "travail"
+        }
       },
       spanish: {
-        suffixes: ["o", "a", "ción", "ico", "oso", "osa", "mente"],
-        prefixes: ["des", "pre", "sobre", "sub"],
+        suffixes: ["o", "a", "ción", "ico", "oso", "osa", "mente", "aje", "ura"],
+        prefixes: ["des", "pre", "sobre", "sub", "re", "co"],
+        commonWords: {
+          "hello": "hola", "world": "mundo", "love": "amor", "time": "tiempo",
+          "day": "día", "night": "noche", "home": "casa", "work": "trabajo"
+        }
       },
       german: {
-        suffixes: ["en", "er", "ung", "isch", "lich", "ig", "heit"],
-        prefixes: ["un", "vor", "über", "unter"],
+        suffixes: ["en", "er", "ung", "isch", "lich", "ig", "heit", "keit"],
+        prefixes: ["un", "vor", "über", "unter", "ver", "be"],
+        commonWords: {
+          "hello": "hallo", "world": "welt", "love": "liebe", "time": "zeit",
+          "day": "tag", "night": "nacht", "home": "haus", "work": "arbeit"
+        }
       },
       italian: {
-        suffixes: ["o", "a", "zione", "ico", "oso", "osa", "mente"],
-        prefixes: ["dis", "pre", "sopra", "sotto"],
+        suffixes: ["o", "a", "zione", "ico", "oso", "osa", "mente", "aggio", "ura"],
+        prefixes: ["dis", "pre", "sopra", "sotto", "ri", "co"],
+        commonWords: {
+          "hello": "ciao", "world": "mondo", "love": "amore", "time": "tempo",
+          "day": "giorno", "night": "notte", "home": "casa", "work": "lavoro"
+        }
       },
       portuguese: {
-        suffixes: ["o", "a", "ção", "ico", "oso", "osa", "mente"],
-        prefixes: ["des", "pré", "sobre", "sub"],
+        suffixes: ["o", "a", "ção", "ico", "oso", "osa", "mente", "agem", "ura"],
+        prefixes: ["des", "pré", "sobre", "sub", "re", "co"],
+        commonWords: {
+          "hello": "olá", "world": "mundo", "love": "amor", "time": "tempo",
+          "day": "dia", "night": "noite", "home": "casa", "work": "trabalho"
+        }
       },
       dutch: {
-        suffixes: ["en", "er", "ing", "isch", "lijk", "ig", "heid"],
-        prefixes: ["on", "voor", "over", "onder"],
+        suffixes: ["en", "er", "ing", "isch", "lijk", "ig", "heid", "teit"],
+        prefixes: ["on", "voor", "over", "onder", "ver", "be"],
+        commonWords: {
+          "hello": "hallo", "world": "wereld", "love": "liefde", "time": "tijd",
+          "day": "dag", "night": "nacht", "home": "huis", "work": "werk"
+        }
       },
       russian: {
-        suffixes: ["ый", "ая", "ие", "ов", "ен", "ка", "ость"],
-        prefixes: ["не", "пре", "над", "под"],
+        suffixes: ["ый", "ая", "ое", "ие", "ов", "ен", "ка", "ость", "ство"],
+        prefixes: ["не", "пре", "над", "под", "пере", "со"],
+        commonWords: {
+          "hello": "привет", "world": "мир", "love": "любовь", "time": "время",
+          "day": "день", "night": "ночь", "home": "дом", "work": "работа"
+        }
       },
       chinese: {
-        suffixes: ["的", "了", "着", "过", "们", "子", "性"],
-        prefixes: ["不", "再", "超", "副"],
+        suffixes: ["的", "了", "着", "过", "们", "子", "性", "化", "度"],
+        prefixes: ["不", "再", "超", "副", "重", "自"],
+        commonWords: {
+          "hello": "你好", "world": "世界", "love": "爱", "time": "时间",
+          "day": "天", "night": "夜晚", "home": "家", "work": "工作"
+        }
       },
       japanese: {
-        suffixes: ["る", "た", "て", "ます", "です", "の", "に"],
-        prefixes: ["不", "再", "超", "副"],
+        suffixes: ["る", "た", "て", "ます", "です", "の", "に", "を", "が"],
+        prefixes: ["不", "再", "超", "副", "重", "自"],
+        commonWords: {
+          "hello": "こんにちは", "world": "世界", "love": "愛", "time": "時間",
+          "day": "日", "night": "夜", "home": "家", "work": "仕事"
+        }
       },
       korean: {
-        suffixes: ["다", "요", "는", "을", "를", "의", "에"],
-        prefixes: ["불", "재", "초", "부"],
-      },
+        suffixes: ["다", "요", "는", "을", "를", "의", "에", "에서", "로"],
+        prefixes: ["불", "재", "초", "부", "중", "자"],
+        commonWords: {
+          "hello": "안녕하세요", "world": "세계", "love": "사랑", "time": "시간",
+          "day": "일", "night": "밤", "home": "집", "work": "일"
+        }
+      }
     };
 
-    const patterns = mockPatterns[targetLang] || mockPatterns.french;
-    let translated = word;
-
-    // Add target language suffix
-    if (Math.random() > 0.4) {
-      const suffix =
-        patterns.suffixes[Math.floor(Math.random() * patterns.suffixes.length)];
-      translated = word.slice(0, -1) + suffix;
+    const patterns = smartPatterns[targetLang] || smartPatterns.french;
+    
+    // Check for common words first
+    if (patterns.commonWords[word.toLowerCase()]) {
+      return patterns.commonWords[word.toLowerCase()];
     }
 
-    // Add target language prefix occasionally
-    if (Math.random() > 0.8) {
-      const prefix =
-        patterns.prefixes[Math.floor(Math.random() * patterns.prefixes.length)];
-      translated = prefix + translated;
+    let translated = word;
+
+    // Smart suffix addition based on word patterns
+    if (word.endsWith('ing') && targetLang !== 'chinese' && targetLang !== 'japanese' && targetLang !== 'korean') {
+      const suffix = patterns.suffixes[Math.floor(Math.random() * Math.min(3, patterns.suffixes.length))];
+      translated = word.slice(0, -3) + suffix;
+    } else if (word.endsWith('tion') && targetLang !== 'chinese' && targetLang !== 'japanese' && targetLang !== 'korean') {
+      const suffix = patterns.suffixes[Math.floor(Math.random() * Math.min(3, patterns.suffixes.length))];
+      translated = word.slice(0, -4) + suffix;
+    } else if (word.length > 3) {
+      // Add appropriate suffix based on language
+      const suffix = patterns.suffixes[Math.floor(Math.random() * Math.min(2, patterns.suffixes.length))];
+      translated = word + suffix;
     }
 
     return translated;
+  }
+
+  // Legacy function for backward compatibility
+  function generateMockTranslation(word, targetLang) {
+    return generateSmartMockTranslation(word, targetLang, [], 0);
+  }
+
+  // Calculate translation quality score
+  function calculateTranslationQuality(originalText, translatedText, targetLang) {
+    let score = 0;
+    const config = languageConfigs[targetLang];
+    
+    if (!config) return 0.3; // Low score for unknown language
+    
+    const originalWords = originalText.toLowerCase().split(/\s+/);
+    const translatedWords = translatedText.toLowerCase().split(/\s+/);
+    
+    // Check for exact phrase matches (highest quality)
+    if (config.translations[originalText.toLowerCase()]) {
+      return 1.0;
+    }
+    
+    // Check for word-by-word accuracy
+    let matchedWords = 0;
+    for (const word of originalWords) {
+      const cleanWord = word.replace(/[.,!?;:"'()]/g, "");
+      if (config.translations[cleanWord]) {
+        matchedWords++;
+      }
+    }
+    
+    // Base score on matched words
+    score = matchedWords / originalWords.length;
+    
+    // Bonus for contextual matches
+    if (findPhraseMatch(originalText, config.translations)) {
+      score += 0.2;
+    }
+    
+    // Penalty for obvious fallback patterns
+    if (translatedText.includes('[Translated to') || 
+        translatedText.includes(']') ||
+        translatedText === originalText) {
+      score = Math.min(score, 0.4);
+    }
+    
+    // Bonus for proper capitalization and punctuation
+    if (translatedText.charAt(0) === translatedText.charAt(0).toUpperCase()) {
+      score += 0.1;
+    }
+    
+    return Math.min(Math.max(score, 0), 1);
   }
 
   // Enhanced typing animation for translation output
@@ -753,8 +976,12 @@ document.addEventListener("DOMContentLoaded", () => {
           translateButton.classList.remove("loading");
           translateButton.classList.add("success");
           
-          // Show success notification
-          showNotification("Translation completed successfully!", "success");
+          // Show success notification with quality indicator
+          const qualityScore = calculateTranslationQuality(text, translation, currentLanguage);
+          const qualityMessage = qualityScore > 0.8 ? "High quality translation!" : 
+                                qualityScore > 0.6 ? "Good translation!" : 
+                                "Translation completed (fallback used)";
+          showNotification(qualityMessage, qualityScore > 0.6 ? "success" : "warning");
           
           // Reset button after delay
           setTimeout(() => {
